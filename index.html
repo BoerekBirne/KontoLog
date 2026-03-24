@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzen</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #181818;
+    --border: #2a2a2a;
+    --text: #f0f0f0;
+    --muted: #666;
+    --green: #22c55e;
+    --green-dim: rgba(34,197,94,0.12);
+    --red: #ef4444;
+    --red-dim: rgba(239,68,68,0.12);
+    --accent: #f0f0f0;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  .layout {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header {
+    margin-bottom: 48px;
+  }
+
+  header h1 {
+    font-family: 'DM Mono', monospace;
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  header p {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 6px;
+    font-weight: 300;
+  }
+
+  /* STATS */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 40px;
+  }
+
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+  }
+
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.neutral { color: var(--text); }
+
+  /* FORM */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+
+  .form-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 2fr auto auto;
+    gap: 10px;
+    align-items: end;
+  }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .field label {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+
+  input, select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 9px 12px;
+    outline: none;
+    width: 100%;
+    transition: border-color 0.15s;
+  }
+
+  input:focus, select:focus { border-color: #444; }
+  input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+  select option { background: #1a1a1a; }
+
+  .btn {
+    border: none;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 9px 16px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-green { background: var(--green); color: #000; }
+  .btn-red   { background: var(--red);   color: #fff; }
+
+  .type-toggle {
+    display: flex;
+    gap: 8px;
+    align-self: end;
+  }
+
+  /* CHART */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    margin-bottom: 32px;
+  }
+
+  .card-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .chart-wrap { height: 220px; }
+
+  /* TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .table-header {
+    padding: 20px 24px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead th {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--muted);
+    padding: 10px 24px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  thead th:last-child { text-align: right; }
+
+  tbody tr {
+    border-bottom: 1px solid #1e1e1e;
+    transition: background 0.1s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: #1f1f1f; }
+
+  tbody td {
+    padding: 12px 24px;
+    font-size: 13px;
+  }
+
+  .td-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .td-desc { color: var(--text); }
+
+  .td-amount {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .td-amount.green { color: var(--green); }
+  .td-amount.red   { color: var(--red);   }
+
+  .pill {
+    display: inline-block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .pill-green { background: var(--green-dim); color: var(--green); }
+  .pill-red   { background: var(--red-dim);   color: var(--red);   }
+
+  .del-btn {
+    background: none;
+    border: none;
+    color: #3a3a3a;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .del-btn:hover { color: var(--red); }
+
+  .btn-ghost {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-ghost:hover { border-color: #444; color: var(--text); }
+
+  .import-wrap { position: relative; }
+  .import-wrap input[type="file"] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer;
+    width: 100%; height: 100%;
+    padding: 0;
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #222;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 10px 20px;
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    pointer-events: none;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 48px 24px;
+  }
+
+  @media (max-width: 640px) {
+    .form-row { grid-template-columns: 1fr 1fr; }
+    .type-toggle { grid-column: 1 / -1; }
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+  <header>
+    <h1>Finanzen</h1>
+    <p>Einnahmen & Ausgaben · nach Datum sortiert</p>
+  </header>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <div class="stat-label">Einnahmen</div>
+      <div class="stat-value green" id="stat-income">0,00 €</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Ausgaben</div>
+      <div class="stat-value red" id="stat-expense">0,00 €</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Saldo</div>
+      <div class="stat-value neutral" id="stat-balance">0,00 €</div>
+    </div>
+  </div>
+
+  <!-- FORM -->
+  <div class="form-card">
+    <div class="form-title">Eintrag hinzufügen</div>
+    <div class="form-row">
+      <div class="field">
+        <label>Datum</label>
+        <input type="date" id="inp-date">
+      </div>
+      <div class="field">
+        <label>Betrag (€)</label>
+        <input type="number" id="inp-amount" placeholder="0,00" step="0.01" min="0">
+      </div>
+      <div class="field">
+        <label>Beschreibung</label>
+        <input type="text" id="inp-desc" placeholder="z.B. Freelance-Rechnung">
+      </div>
+      <div class="type-toggle">
+        <button class="btn btn-green" onclick="addEntry('income')">+ Einnahme</button>
+        <button class="btn btn-red" onclick="addEntry('expense')">− Ausgabe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHART -->
+  <div class="chart-card">
+    <div class="card-title">Verlauf</div>
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <!-- TABLE -->
+  <div class="table-card">
+    <div class="table-header">
+      <div class="card-title" style="margin:0">Transaktionen</div>
+      <div style="display:flex;gap:8px;">
+        <div class="import-wrap">
+          <button class="btn btn-ghost" style="font-size:11px;padding:7px 14px;">↑ Importieren</button>
+          <input type="file" accept=".csv" onchange="importCSV(event)">
+        </div>
+        <button class="btn btn-ghost" style="font-size:11px;padding:7px 14px;" onclick="exportCSV()">↓ Exportieren</button>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Beschreibung</th>
+          <th>Typ</th>
+          <th style="text-align:right">Betrag</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div id="empty-state" class="empty">Noch keine Einträge.</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  let entries = JSON.parse(localStorage.getItem('fin_entries') || '[]');
+  let chart;
+
+  document.getElementById('inp-date').valueAsDate = new Date();
+
+  function save() { localStorage.setItem('fin_entries', JSON.stringify(entries)); }
+
+  function fmt(num) {
+    return num.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+  }
+
+  function fmtDate(dateStr) {
+    const [y, m, d] = dateStr.split('-');
+    return `${d}.${m}.${y}`;
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function exportCSV() {
+    if (!entries.length) { showToast('Keine Daten zum Exportieren.'); return; }
+    const rows = [['Datum', 'Beschreibung', 'Typ', 'Betrag']];
+    entries.forEach(e => rows.push([e.date, e.desc, e.type === 'income' ? 'Einnahme' : 'Ausgabe', e.amount.toFixed(2)]));
+    const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `finanzen_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    showToast('Exportiert ✓');
+  }
+
+  function importCSV(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const lines = e.target.result.replace(/^\uFEFF/, '').trim().split('\n').slice(1);
+      let count = 0;
+      lines.forEach(line => {
+        const cols = line.split(',').map(v => v.replace(/^"|"$/g, '').trim());
+        if (cols.length < 4) return;
+        const [date, desc, typRaw, amountRaw] = cols;
+        const amount = parseFloat(amountRaw);
+        const type = typRaw === 'Einnahme' ? 'income' : 'expense';
+        if (!date || isNaN(amount)) return;
+        // avoid duplicates by id — use date+desc+amount as key
+        const key = date + desc + amount;
+        if (!entries.find(ex => ex.date + ex.desc + ex.amount === key)) {
+          entries.push({ id: Date.now() + Math.random(), date, desc: desc || '—', type, amount });
+          count++;
+        }
+      });
+      save();
+      render();
+      showToast(`${count} Einträge importiert ✓`);
+      event.target.value = '';
+    };
+    reader.readAsText(file, 'UTF-8');
+  }
+
+  function addEntry(type) {
+    const date = document.getElementById('inp-date').value;
+    const amount = parseFloat(document.getElementById('inp-amount').value);
+    const desc = document.getElementById('inp-desc').value.trim();
+
+    if (!date || isNaN(amount) || amount <= 0) {
+      document.getElementById('inp-amount').style.borderColor = '#ef4444';
+      setTimeout(() => document.getElementById('inp-amount').style.borderColor = '', 1000);
+      return;
+    }
+
+    entries.push({ id: Date.now(), date, amount, desc: desc || '—', type });
+    save();
+    document.getElementById('inp-amount').value = '';
+    document.getElementById('inp-desc').value = '';
+    render();
+  }
+
+  function deleteEntry(id) {
+    entries = entries.filter(e => e.id !== id);
+    save();
+    render();
+  }
+
+  function render() {
+    const sorted = [...entries].sort((a, b) => b.date.localeCompare(a.date));
+    const income  = entries.filter(e => e.type === 'income').reduce((s, e) => s + e.amount, 0);
+    const expense = entries.filter(e => e.type === 'expense').reduce((s, e) => s + e.amount, 0);
+    const balance = income - expense;
+
+    // Stats
+    document.getElementById('stat-income').textContent = fmt(income);
+    document.getElementById('stat-expense').textContent = fmt(expense);
+    const balEl = document.getElementById('stat-balance');
+    balEl.textContent = fmt(balance);
+    balEl.className = 'stat-value ' + (balance >= 0 ? 'green' : 'red');
+
+    // Table
+    const tbody = document.getElementById('tbody');
+    const empty = document.getElementById('empty-state');
+    tbody.innerHTML = '';
+
+    if (sorted.length === 0) {
+      empty.style.display = 'block';
+    } else {
+      empty.style.display = 'none';
+      sorted.forEach(e => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="td-date">${fmtDate(e.date)}</td>
+          <td class="td-desc">${e.desc}</td>
+          <td><span class="pill ${e.type === 'income' ? 'pill-green' : 'pill-red'}">${e.type === 'income' ? 'Einnahme' : 'Ausgabe'}</span></td>
+          <td class="td-amount ${e.type === 'income' ? 'green' : 'red'}">${e.type === 'income' ? '+' : '−'}${fmt(e.amount)}</td>
+          <td><button class="del-btn" onclick="deleteEntry(${e.id})">✕</button></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // Chart
+    renderChart(sorted);
+  }
+
+  function renderChart(sorted) {
+    // Build cumulative balance over time (ascending)
+    const asc = [...sorted].sort((a, b) => a.date.localeCompare(b.date));
+    const labels = [];
+    const incomeData = [];
+    const expenseData = [];
+    const balanceData = [];
+
+    // Group by date
+    const byDate = {};
+    asc.forEach(e => {
+      if (!byDate[e.date]) byDate[e.date] = { income: 0, expense: 0 };
+      if (e.type === 'income') byDate[e.date].income += e.amount;
+      else byDate[e.date].expense += e.amount;
+    });
+
+    let cumBal = 0;
+    Object.keys(byDate).sort().forEach(date => {
+      labels.push(fmtDate(date));
+      incomeData.push(byDate[date].income);
+      expenseData.push(byDate[date].expense);
+      cumBal += byDate[date].income - byDate[date].expense;
+      balanceData.push(parseFloat(cumBal.toFixed(2)));
+    });
+
+    if (chart) chart.destroy();
+
+    const ctx = document.getElementById('chart').getContext('2d');
+    chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'Einnahmen',
+            data: incomeData,
+            backgroundColor: 'rgba(34,197,94,0.7)',
+            borderColor: '#22c55e',
+            borderWidth: 1,
+            borderRadius: 4,
+            order: 2,
+          },
+          {
+            label: 'Ausgaben',
+            data: expenseData,
+            backgroundColor: 'rgba(239,68,68,0.7)',
+            borderColor: '#ef4444',
+            borderWidth: 1,
+            borderRadius: 4,
+            order: 2,
+          },
+          {
+            label: 'Saldo',
+            data: balanceData,
+            type: 'line',
+            borderColor: '#f0f0f0',
+            backgroundColor: 'transparent',
+            borderWidth: 2,
+            pointRadius: 3,
+            pointBackgroundColor: '#f0f0f0',
+            tension: 0.3,
+            order: 1,
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: {
+            labels: {
+              color: '#888',
+              font: { family: 'DM Mono', size: 11 },
+              boxWidth: 12,
+              padding: 16,
+            }
+          },
+          tooltip: {
+            backgroundColor: '#1e1e1e',
+            borderColor: '#2a2a2a',
+            borderWidth: 1,
+            titleColor: '#888',
+            bodyColor: '#f0f0f0',
+            titleFont: { family: 'DM Mono', size: 10 },
+            bodyFont: { family: 'DM Mono', size: 12 },
+            callbacks: {
+              label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString('de-DE', {minimumFractionDigits:2})} €`
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#555', font: { family: 'DM Mono', size: 10 } },
+            grid: { color: '#1e1e1e' },
+          },
+          y: {
+            ticks: {
+              color: '#555',
+              font: { family: 'DM Mono', size: 10 },
+              callback: v => v.toLocaleString('de-DE') + ' €'
+            },
+            grid: { color: '#1e1e1e' },
+          }
+        }
+      }
+    });
+  }
+
+  render();
+</script>
+</body>
+</html>
